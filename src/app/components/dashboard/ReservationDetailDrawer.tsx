@@ -11,25 +11,20 @@ interface ReservationDetailDrawerProps {
     reservationId: string | null;
     onClose: () => void;
     onStatusChange: (id: string, status: DashboardReservation["status"], note?: string, expectedUpdatedAt?: string) => void;
-    onAssignStaff: (id: string, staffId: string) => void;
-    staffMembers: Array<{ id: string; full_name: string }>;
 }
 
 export function ReservationDetailDrawer({
     reservationId,
     onClose,
     onStatusChange,
-    onAssignStaff,
-    staffMembers
 }: ReservationDetailDrawerProps) {
     const [reservation, setReservation] = useState<CalendarReservation | null>(null);
-    const [loading, setLoading] = useState(false);
+
     const router = useRouter();
     const { slug } = useParams();
     const queryClient = useQueryClient();
 
     const fetchDetail = useCallback(async (id: string) => {
-        setLoading(true);
         try {
             const { data: row, error } = await supabase
                 .from("reservations")
@@ -87,8 +82,6 @@ export function ReservationDetailDrawer({
             }
         } catch (err) {
             console.error("Error fetching reservation detail:", err);
-        } finally {
-            setLoading(false);
         }
     }, []);
 

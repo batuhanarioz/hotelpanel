@@ -27,7 +27,7 @@ export function PaymentActionModal({
     isOpen, onClose, onSubmit, type, amount, setAmount, method, setMethod, note, setNote,
     saving, currency, setCurrency,
     referenceNo, setReferenceNo,
-    totalCharges, totalPayments, balance, userRole
+    totalCharges, totalPayments, balance
 }: PaymentActionModalProps) {
     if (!isOpen) return null;
 
@@ -38,6 +38,10 @@ export function PaymentActionModal({
         service_charge: { title: "Hizmet Ücreti Ekle", color: "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200", titleColor: "text-indigo-700" },
         tax: { title: "Vergi / KDV Ekle", color: "bg-purple-600 hover:bg-purple-700 shadow-purple-200", titleColor: "text-purple-700" },
         adjustment: { title: "Düzeltme Kaydı", color: "bg-sky-600 hover:bg-sky-700 shadow-sky-200", titleColor: "text-sky-700" },
+        discount: { title: "İndirim Uygula", color: "bg-pink-600 hover:bg-pink-700 shadow-pink-200", titleColor: "text-pink-700" },
+        accommodation: { title: "Konaklama Ücreti", color: "bg-amber-600 hover:bg-amber-700 shadow-amber-200", titleColor: "text-amber-700" },
+        charge: { title: "Harcama Ekle", color: "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200", titleColor: "text-indigo-700" },
+        extra: { title: "Ekstra Hizmet", color: "bg-cyan-600 hover:bg-cyan-700 shadow-cyan-200", titleColor: "text-cyan-700" },
     };
 
     const cfg = typeConfig[type] || typeConfig.service_charge;

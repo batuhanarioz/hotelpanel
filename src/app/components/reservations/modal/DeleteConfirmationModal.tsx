@@ -11,6 +11,7 @@ interface DeleteConfirmationModalProps {
     confirmText?: string;
     cancelText?: string;
     itemName?: string;
+    autoClose?: boolean;
 }
 
 export function DeleteConfirmationModal({
@@ -21,7 +22,8 @@ export function DeleteConfirmationModal({
     description = "Bu işlem geri alınamaz. Rezervasyon kalıcı olarak silinecektir.",
     confirmText = "Evet, Sil",
     cancelText = "Vazgeç",
-    itemName
+    itemName,
+    autoClose = true
 }: DeleteConfirmationModalProps) {
     if (!isOpen) return null;
 
@@ -69,7 +71,7 @@ export function DeleteConfirmationModal({
                     <button
                         onClick={() => {
                             onConfirm();
-                            onClose();
+                            if (autoClose) onClose();
                         }}
                         className="flex-1 px-4 py-3.5 rounded-2xl bg-rose-600 text-white text-xs font-black uppercase shadow-lg shadow-rose-100 hover:bg-rose-700 transition-all active:scale-95"
                     >

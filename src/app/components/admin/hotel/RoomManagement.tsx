@@ -72,7 +72,7 @@ export function RoomManagement() {
             floor: floor || null,
             pax_limit: paxLimit,
             notes,
-            status: editingRoom?.status || "clean"
+            status: editingRoom?.status || "CLEAN"
         };
 
         try {
@@ -142,7 +142,7 @@ export function RoomManagement() {
                                         <span className="text-xs font-bold text-slate-600">{room.pax_limit || 2} Pax</span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${room.status === 'CLEAN' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                             {room.status}
                                         </span>
                                     </td>

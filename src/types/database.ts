@@ -135,7 +135,7 @@ export interface Guest {
   blacklist_reason: string | null;
   marketing_consent: boolean;
   tags: string[];
-  preferences: Record<string, any>;
+  preferences: Record<string, unknown>;
   created_at: string;
 }
 

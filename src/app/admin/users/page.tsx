@@ -548,7 +548,7 @@ export default function AdminUsersPage() {
                   <option value={UserRole.ADMIN}>ADMIN</option>
                   <option value={UserRole.DOKTOR}>DOKTOR</option>
                   <option value={UserRole.SEKRETER}>SEKRETER</option>
-                  <option value={UserRole.FINANS}>FINANS</option>
+                  <option value={UserRole.FINANCE}>FINANS</option>
                 </select>
               </div>
               <div className="space-y-1">
@@ -639,7 +639,7 @@ export default function AdminUsersPage() {
                   <option value={UserRole.ADMIN}>ADMIN</option>
                   <option value={UserRole.DOKTOR}>DOKTOR</option>
                   <option value={UserRole.SEKRETER}>SEKRETER</option>
-                  <option value={UserRole.FINANS}>FINANS</option>
+                  <option value={UserRole.FINANCE}>FINANS</option>
                 </select>
               </div>
               <div className="mt-3 flex justify-between gap-2">

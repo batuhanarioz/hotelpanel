@@ -75,7 +75,7 @@ export function GuestPicker({
                                             phone: guest.phone || "",
                                             email: guest.email || "",
                                             birthDate: guest.birth_date || "",
-                                            identityPhotoUrl: (guest as any).identity_photo_url || "",
+                                            identityPhotoUrl: (guest as GuestSearchResult & { identity_photo_url?: string }).identity_photo_url || "",
                                         }));
                                     }}
                                     className="w-full px-3 py-2 text-left text-[11px] flex flex-col gap-0.5 transition-colors cursor-pointer hover:bg-slate-50"

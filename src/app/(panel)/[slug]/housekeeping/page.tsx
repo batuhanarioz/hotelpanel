@@ -154,7 +154,7 @@ export default function HousekeepingPage() {
     const handleFinishCleaning = (roomId: string) => {
         handleStatusChange(roomId, 'QC_PENDING');
         // Update DB with completion time and calculate duration
-        const room = rooms.find(r => r.id === roomId);
+
         const now = new Date();
         const nowIso = now.toISOString();
 

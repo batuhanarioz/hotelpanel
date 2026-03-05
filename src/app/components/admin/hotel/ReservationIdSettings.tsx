@@ -168,7 +168,7 @@ export function ReservationIdSettings() {
                         {saving ? "Kaydediliyor..." : "Ayarları Kaydet"}
                     </button>
                     <p className="text-[10px] text-slate-400 font-bold mt-4">
-                        Not: Buradaki değişiklikler <span className="text-slate-600">gelecekteki</span> rezervasyonları etkiler. Mevcut rezervasyonların ID'leri değişmez.
+                        Not: Buradaki değişiklikler <span className="text-slate-600">gelecekteki</span> rezervasyonları etkiler. Mevcut rezervasyonların ID&apos;leri değişmez.
                     </p>
                 </div>
             </form>

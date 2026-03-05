@@ -13,11 +13,10 @@ interface StatusBarProps {
     count: number;
     total: number;
     color: string;
-    bgColor: string;
     textColor: string;
 }
 
-function StatusBar({ label, count, total, color, bgColor, textColor }: StatusBarProps) {
+function StatusBar({ label, count, total, color, textColor }: StatusBarProps) {
     const pct = total > 0 ? Math.round((count / total) * 100) : 0;
     return (
         <div className="space-y-1.5">
@@ -115,7 +114,6 @@ export function RoomStatusWidget({ roomStatus, isLoading }: Props) {
                         count={s.count}
                         total={total}
                         color={s.color}
-                        bgColor={s.bgColor}
                         textColor={s.textColor}
                     />
                 ))}

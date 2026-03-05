@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { useGuests, GuestRow } from "@/hooks/useGuests";
 import { guestSchema } from "@/lib/validations/guest";
 import { z } from "zod";
@@ -198,7 +199,7 @@ export function GuestCreateModal({ isOpen, onClose, onSuccess }: GuestCreateModa
                                 <select
                                     className="w-full rounded-xl border-2 border-slate-100 bg-white px-4 py-2.5 text-sm font-bold focus:border-emerald-500 focus:outline-none transition-all"
                                     value={formData.identity_type}
-                                    onChange={(e) => setFormData({ ...formData, identity_type: e.target.value as any })}
+                                    onChange={(e) => setFormData({ ...formData, identity_type: e.target.value as "tc" | "passport" | "other" })}
                                 >
                                     <option value="tc">TC Kimlik</option>
                                     <option value="passport">Pasaport</option>
@@ -230,7 +231,7 @@ export function GuestCreateModal({ isOpen, onClose, onSuccess }: GuestCreateModa
                                             <select
                                                 className="text-[10px] font-black uppercase tracking-widest border-b-2 border-amber-200 bg-transparent py-1 outline-none"
                                                 value={formData.vip_level}
-                                                onChange={(e) => setFormData({ ...formData, vip_level: e.target.value as any })}
+                                                onChange={(e) => setFormData({ ...formData, vip_level: e.target.value as "silver" | "gold" | "platinum" })}
                                             >
                                                 <option value="silver">Silver</option>
                                                 <option value="gold">Gold</option>
@@ -266,7 +267,7 @@ export function GuestCreateModal({ isOpen, onClose, onSuccess }: GuestCreateModa
                                 <div className="flex items-center gap-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                     {formData.identity_photo_url ? (
                                         <div className="relative h-20 w-32 rounded-xl overflow-hidden shadow-sm border border-slate-200 group">
-                                            <img src={formData.identity_photo_url} alt="Identity" className="h-full w-full object-cover" />
+                                            <Image src={formData.identity_photo_url} alt="Identity" className="h-full w-full object-cover" width={128} height={80} />
                                             <button
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, identity_photo_url: "" })}

@@ -1,6 +1,19 @@
 import React from "react";
 import { ReservationFolio, FolioItem, LedgerItemType } from "@/hooks/useFolio";
 
+interface AuditLogEntry {
+    id: string;
+    action: string;
+    actor_name?: string;
+    user_id?: string;
+    created_at: string;
+    details?: {
+        description?: string;
+        amount?: number;
+        currency?: string;
+    };
+}
+
 interface FolioDrawerProps {
     isOpen: boolean;
     onClose: () => void;
@@ -9,7 +22,7 @@ interface FolioDrawerProps {
     onPrint: () => void;
     onExportPdf: () => void;
     onCancelFolioItem?: (folioId: string, item: FolioItem) => void;
-    auditLogs: any[];
+    auditLogs: AuditLogEntry[];
     userRole?: string;
 }
 
@@ -239,7 +252,7 @@ export function FolioDrawer({ isOpen, onClose, folio, onOpenPaymentForm, onPrint
                                     return (
                                         <div key={`audit-${log.id}`} className="flex gap-4 items-start">
                                             <div className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${log.action?.includes('payment') ? 'bg-emerald-500' :
-                                                    log.action?.includes('refund') ? 'bg-rose-500' : 'bg-indigo-500'
+                                                log.action?.includes('refund') ? 'bg-rose-500' : 'bg-indigo-500'
                                                 }`} />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start">

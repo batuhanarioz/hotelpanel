@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { GuestRow, GuestReservation, GuestFolio } from "@/hooks/useGuests";
+import { GuestRow, GuestReservation, GuestFolio, AuditLog, FinancialSummary } from "@/hooks/useGuests";
 import { useHotel } from "@/app/context/HotelContext";
+
+
 
 interface GuestDetailModalProps {
     isOpen: boolean;
@@ -10,8 +12,8 @@ interface GuestDetailModalProps {
     guest: GuestRow | null;
     reservations: GuestReservation[];
     folios: GuestFolio[];
-    auditLogs?: any[];
-    financialSummary?: any;
+    auditLogs?: AuditLog[];
+    financialSummary?: FinancialSummary | null;
     onDelete?: (id: string) => Promise<boolean>;
     onUpdate: (id: string, updates: Partial<GuestRow>) => Promise<boolean>;
     isLoading?: boolean;
@@ -379,12 +381,12 @@ export function GuestDetailModal({
                                 <div className="space-y-4">
                                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">İşlem Geçmişi (Audit)</h3>
                                     <div className="space-y-3">
-                                        {auditLogs.map((log: any) => (
+                                        {auditLogs.map((log: AuditLog) => (
                                             <div key={log.id} className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
                                                 <div className="flex items-center justify-between">
                                                     <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${log.action === 'created' ? 'bg-emerald-100 text-emerald-700' :
-                                                            log.action === 'merged' ? 'bg-indigo-100 text-indigo-700' :
-                                                                log.action === 'blacklist_toggle' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
+                                                        log.action === 'merged' ? 'bg-indigo-100 text-indigo-700' :
+                                                            log.action === 'blacklist_toggle' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
                                                         }`}>
                                                         {log.action}
                                                     </span>

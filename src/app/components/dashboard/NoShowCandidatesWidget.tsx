@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { UserRole } from "@/types/database";
 import { DashboardReservation } from "@/hooks/useDashboard";
 import { Permission } from "@/types/permissions";
-import { Users, Clock, AlertTriangle, ExternalLink } from "lucide-react";
+import { ReservationStatus } from "@/types/database";
+import { Clock, AlertTriangle, ExternalLink } from "lucide-react";
 
 interface NoShowCandidatesWidgetProps {
     candidates: DashboardReservation[];
-    onMarkNoShow: (id: string, status: any, note: string, expectedUpdatedAt?: string) => Promise<void>;
+    onMarkNoShow: (id: string, status: ReservationStatus, note: string, expectedUpdatedAt?: string) => Promise<void>;
     onOpenReservation: (res: DashboardReservation) => void;
     checkPermission: (p: Permission) => boolean;
 }
@@ -43,7 +43,7 @@ export const NoShowCandidatesWidget: React.FC<NoShowCandidatesWidgetProps> = ({
             <div className="divide-y divide-slate-50 max-h-[400px] overflow-y-auto">
                 {candidates.map((res) => {
                     const checkInTime = new Date(res.startsAt);
-                    const candidateTime = res.noShowCandidateAt ? new Date(res.noShowCandidateAt) : null;
+
                     const now = new Date();
                     const delayMinutes = Math.floor((now.getTime() - checkInTime.getTime()) / 60000);
                     const hours = Math.floor(delayMinutes / 60);

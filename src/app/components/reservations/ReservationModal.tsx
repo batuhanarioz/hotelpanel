@@ -33,7 +33,7 @@ interface ReservationModalProps {
     matchedGuestPassport: string | null;
     conflictWarning: string | null;
     handleSubmit: (e: React.FormEvent) => void;
-    handleDelete: () => void;
+    handleCancel: () => void;
     handleUseDuplicate: () => void;
     rooms: { id: string; room_number: string; room_type?: { name: string; }[] }[];
     isUploading?: boolean;
@@ -43,7 +43,7 @@ interface ReservationModalProps {
 
 export function ReservationModal(props: ReservationModalProps) {
     const [autoAssign, setAutoAssign] = React.useState(false);
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
+
     const [showMoreInfo, setShowMoreInfo] = React.useState(false);
 
     if (!props.isOpen) return null;
@@ -191,7 +191,7 @@ export function ReservationModal(props: ReservationModalProps) {
                     <div className="px-6 pb-5">
                         <ModalFooter
                             editing={!!props.editing}
-                            handleDelete={props.handleDelete}
+                            handleCancel={props.handleCancel}
                         />
                     </div>
                 </div>

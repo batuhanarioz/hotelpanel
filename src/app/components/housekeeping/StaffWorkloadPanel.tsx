@@ -1,8 +1,12 @@
 import React from 'react';
-import { Room } from '@/types/database';
+import { Room } from './HousekeepingKPIs';
+
+interface StaffWorkloadRoom extends Room {
+    assigned_staff?: { id: string; name: string };
+}
 
 interface StaffWorkloadPanelProps {
-    rooms: any[]; // Using any[] temporarily for flexible mapping
+    rooms: StaffWorkloadRoom[];
     staffList: { id: string; name: string }[];
 }
 

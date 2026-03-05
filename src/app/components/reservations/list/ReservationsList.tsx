@@ -13,14 +13,28 @@ import { useReservationManagement, CalendarReservation } from "@/hooks/useReserv
 import { ACCENT_COLORS } from "@/constants/reservations";
 import { ReservationStatus } from "@/types/database";
 import { useDebounce } from "@/hooks/useDebounce";
-import { Check, Copy, AlertCircle, Clock } from "lucide-react";
+import { Check, Copy, Trash2, XCircle, Ban } from "lucide-react";
 import { DeleteConfirmationModal } from "../modal/DeleteConfirmationModal";
 
 type SortField = 'check_in_date' | 'check_out_date' | 'created_at' | 'estimated_amount';
 type SortDirection = 'asc' | 'desc';
 
+interface ExportRow {
+    id: string;
+    reservation_number: string | null;
+    check_in_date: string;
+    check_out_date: string;
+    estimated_amount: number | null;
+    currency: string | null;
+    status: string;
+    payment_status: string | null;
+    no_show_candidate: boolean;
+    guests: { full_name: string | null; phone: string | null } | { full_name: string | null; phone: string | null }[] | null;
+    rooms: { room_number: string; room_types: { name: string } | { name: string }[] | null } | { room_number: string; room_types: { name: string } | { name: string }[] | null }[] | null;
+}
+
 export default function ReservationsList() {
-    const { hotelId, defaultCurrency } = useHotel();
+    const { hotelId, defaultCurrency, isAdmin } = useHotel();
     const queryClient = useQueryClient();
 
     // -- Pagination & Sorting --
@@ -41,7 +55,7 @@ export default function ReservationsList() {
     const [endDate, setEndDate] = useState<string>(format(addDays(new Date(), 365), "yyyy-MM-dd"));
     const [roomTypeFilter, setRoomTypeFilter] = useState<string>("all");
     const [roomFilter, setRoomFilter] = useState<string>("all");
-    const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
+
 
     // Bulk Actions
     const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
@@ -83,9 +97,10 @@ export default function ReservationsList() {
 
     // -- Drawer & Modal States --
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [selectedReservation, setSelectedReservation] = useState<any>(null);
+    const [selectedReservation, setSelectedReservation] = useState<CalendarReservation | null>(null);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-    const gridRef = React.useRef<HTMLDivElement>(null);
+    const [deleteConfirmType, setDeleteConfirmType] = useState<"cancel" | "hard">("cancel");
+    const [hardDeleteStep, setHardDeleteStep] = useState(1);
 
     // Reuse existing hook for modal/actions
     const {
@@ -93,7 +108,7 @@ export default function ReservationsList() {
         formTime, setFormTime, formDate, setFormDate, staffMembers, guestSearch, setGuestSearch, guestSearchResults,
         guestSearchLoading, selectedGuestId, setSelectedGuestId, duplicateGuest, form, setForm,
         guestMatchInfo, isNewGuest, conflictWarning, matchedGuestPreferences, matchedGuestPassport,
-        openNew, openEdit, handleSubmit, handleDelete, handleUseDuplicate, closeModal,
+        openNew, openEdit, handleSubmit, handleCancel, handleHardDelete, handleUseDuplicate, closeModal,
         todaySchedule, rooms, isUploading, handleFileUpload,
         handleExtend, handleMove
     } = useReservationManagement({
@@ -148,7 +163,7 @@ export default function ReservationsList() {
 
     // 2. Fetch Paginated Reservations List
     const { data: listData, isLoading: listLoading } = useQuery({
-        queryKey: ["reservations_list", hotelId, page, pageSize, sortBy, sortDir, debouncedSearchTerm, startDate, endDate, quickFilter, dateFilterType, roomTypeFilter, roomFilter, showUnassignedOnly],
+        queryKey: ["reservations_list", hotelId, page, pageSize, sortBy, sortDir, debouncedSearchTerm, startDate, endDate, quickFilter, dateFilterType, roomTypeFilter, roomFilter],
         queryFn: async () => {
             if (!hotelId) return { reservations: [], totalCount: 0 };
 
@@ -201,9 +216,7 @@ export default function ReservationsList() {
             if (roomFilter !== 'all') {
                 query = query.eq('room_id', roomFilter);
             }
-            if (showUnassignedOnly) {
-                query = query.is('room_id', null);
-            }
+
 
             if (debouncedSearchTerm) {
                 const searchLower = debouncedSearchTerm.toLowerCase();
@@ -293,7 +306,7 @@ export default function ReservationsList() {
             }));
 
             let finalData = adapted;
-            let finalCount = count || 0;
+            const finalCount = count || 0;
 
             if (roomTypeFilter !== 'all') {
                 finalData = finalData.filter((r: CalendarReservation & { roomTypeName?: string }) => r.roomTypeName === roomTypeFilter);
@@ -355,12 +368,7 @@ export default function ReservationsList() {
         );
     };
 
-    const handleCopy = (e: React.MouseEvent, text: string, id: string) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(text);
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), 2000);
-    };
+
 
     const handleNewReservation = () => {
         if (startDate) {
@@ -418,40 +426,45 @@ export default function ReservationsList() {
             const { data, error } = await query;
             if (error) throw error;
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let finalExport: any[] = data || [];
+            let finalExport = (data || []) as unknown as ExportRow[];
 
             // Further client side filtering for guest ID if debouncedSearchTerm exists
             if (debouncedSearchTerm) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const nameFilteredData = finalExport.filter((r: any) =>
-                    (r.guests?.full_name?.toLowerCase() || "").includes(debouncedSearchTerm.toLowerCase()) ||
-                    (r.guests?.phone || "").includes(debouncedSearchTerm) ||
-                    (r.reservation_number || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                    (r.id || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-                );
+                const nameFilteredData = finalExport.filter((r) => {
+                    const guest = Array.isArray(r.guests) ? r.guests[0] : r.guests;
+                    return (guest?.full_name?.toLowerCase() || "").includes(debouncedSearchTerm.toLowerCase()) ||
+                        (guest?.phone || "").includes(debouncedSearchTerm) ||
+                        (r.reservation_number || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                        (r.id || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+                });
                 finalExport = nameFilteredData;
             }
             if (roomTypeFilter !== 'all') {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                finalExport = finalExport.filter((r: any) => r.rooms?.room_types?.name === roomTypeFilter);
+                finalExport = finalExport.filter((r) => {
+                    const room = Array.isArray(r.rooms) ? r.rooms[0] : r.rooms;
+                    const roomType = Array.isArray(room?.room_types) ? room?.room_types[0] : room?.room_types;
+                    return roomType?.name === roomTypeFilter;
+                });
             }
 
             // Generate CSV
             const headers = ["Rez Kodu", "Misafir", "Telefon", "Oda No", "Oda Tipi", "Giriş", "Çıkış", "Gece", "Durum", "Tutar", "Döviz", "Ödeme Durumu", "No-Show Adayı"];
             const csvRows = [
                 headers.join(","),
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                ...finalExport.map((row: any) => {
+                ...finalExport.map((row) => {
+                    const guest = Array.isArray(row.guests) ? row.guests[0] : row.guests;
+                    const room = Array.isArray(row.rooms) ? row.rooms[0] : row.rooms;
+                    const roomType = Array.isArray(room?.room_types) ? room?.room_types[0] : room?.room_types;
+
                     const cin = parseISO(row.check_in_date || new Date().toISOString());
                     const cout = parseISO(row.check_out_date || new Date().toISOString());
                     const nights = Math.max(1, Math.round((cout.getTime() - cin.getTime()) / (1000 * 60 * 60 * 24)));
                     return [
                         row.reservation_number || `#${row.id.substring(0, 8)}`,
-                        `"${row.guests?.full_name || 'Bilinmeyen'}"`,
-                        `"${row.guests?.phone || ''}"`,
-                        row.rooms?.room_number || 'Atanmadı',
-                        row.rooms?.room_types?.name || 'Belirtilmedi',
+                        `"${guest?.full_name || 'Bilinmeyen'}"`,
+                        `"${guest?.phone || ''}"`,
+                        room?.room_number || 'Atanmadı',
+                        roomType?.name || 'Belirtilmedi',
                         format(cin, "yyyy-MM-dd"),
                         format(cout, "yyyy-MM-dd"),
                         nights,
@@ -557,7 +570,7 @@ export default function ReservationsList() {
                                     >
                                         <option value="" disabled>Oda Ata</option>
                                         <option value="unassign">Odayı Kaldır</option>
-                                        {rooms.map((room: any) => (
+                                        {rooms.map((room: { id: string, room_number: string }) => (
                                             <option key={room.id} value={room.id}>{room.room_number}</option>
                                         ))}
                                     </select>
@@ -735,7 +748,7 @@ export default function ReservationsList() {
                                         onChange={(e) => {
                                             const resList = listData?.reservations || [];
                                             if (e.target.checked) {
-                                                setSelectedRowIds(new Set(resList.map((r: any) => r.id)));
+                                                setSelectedRowIds(new Set(resList.map((r) => r.id)));
                                             } else {
                                                 setSelectedRowIds(new Set());
                                             }
@@ -913,13 +926,29 @@ export default function ReservationsList() {
                                                         onClick={async (e) => {
                                                             e.stopPropagation();
                                                             setSelectedReservation(r);
+                                                            setDeleteConfirmType("cancel");
                                                             setDeleteConfirmOpen(true);
                                                         }}
                                                         className="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center"
-                                                        title="Sil"
+                                                        title="İptal Et"
                                                     >
-                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        <Ban className="w-4 h-4" />
                                                     </button>
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedReservation(r);
+                                                                setDeleteConfirmType("hard");
+                                                                setHardDeleteStep(1);
+                                                                setDeleteConfirmOpen(true);
+                                                            }}
+                                                            className="w-8 h-8 rounded-lg text-slate-400 hover:text-red-800 hover:bg-red-50 transition-colors flex items-center justify-center"
+                                                            title="Kalıcı Sil (Admin)"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -992,13 +1021,17 @@ export default function ReservationsList() {
 
                         queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
                         setDrawerOpen(false);
-                    } catch (err: any) {
-                        alert("Durum güncellenemedi: " + err.message);
+                    } catch (err: unknown) {
+                        alert("Durum güncellenemedi: " + (err as Error).message);
                     }
                 }}
                 onExtend={handleExtend}
                 onMove={handleMove}
-                onDelete={() => setDeleteConfirmOpen(true)}
+                onCancel={(res) => {
+                    setSelectedReservation(res);
+                    setDeleteConfirmType("cancel");
+                    setDeleteConfirmOpen(true);
+                }}
             />
 
             {
@@ -1033,7 +1066,10 @@ export default function ReservationsList() {
                             queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
                             queryClient.invalidateQueries({ queryKey: ["reservations_stats"] });
                         }}
-                        handleDelete={() => setDeleteConfirmOpen(true)}
+                        handleCancel={() => {
+                            setDeleteConfirmType("cancel");
+                            setDeleteConfirmOpen(true);
+                        }}
                         handleUseDuplicate={handleUseDuplicate}
                         rooms={rooms}
                         isUploading={isUploading}
@@ -1043,23 +1079,67 @@ export default function ReservationsList() {
             }
             <DeleteConfirmationModal
                 isOpen={deleteConfirmOpen}
-                onClose={() => setDeleteConfirmOpen(false)}
+                onClose={() => {
+                    setDeleteConfirmOpen(false);
+                    setHardDeleteStep(1);
+                }}
+                title={deleteConfirmType === "cancel" ? "Rezervasyonu İptal Et" : (hardDeleteStep === 1 ? "DİKKAT: Rezervasyonu Kalıcı Sil" : "SON ONAY: Kalıcı Siliniyor")}
+                description={
+                    deleteConfirmType === "cancel"
+                        ? "Bu rezervasyonu iptal etmek istediğinize emin misiniz? Folyolar ve geçmiş kayıtlar korunacaktır."
+                        : (hardDeleteStep === 1
+                            ? "DİKKAT! Bu işlem rezervasyonu ve ona ait TÜM harcamaları, ödemeleri ve geçmişi kalıcı olarak siler. Bu işlem GERİ ALINAMAZ."
+                            : "Bu rezervasyonu ve ilişkili tüm finansal kayıtları veritabanından tamamen silmek istediğinizden EMİN MİSİNİZ? Bu işlem büyük bir risk taşır.")
+                }
+                confirmText={
+                    deleteConfirmType === "cancel"
+                        ? "Evet, İptal Et"
+                        : (hardDeleteStep === 1 ? "Anlıyorum, Devam Et" : "EVET, KALICI OLARAK SİL")
+                }
                 onConfirm={async () => {
                     const target = selectedReservation || editing;
                     if (!target?.id) return;
-                    const targetId = target.id;
-                    const { error } = await supabase.from("reservations").delete().eq("id", targetId);
-                    if (error) {
-                        alert("Silme hatası: " + error.message);
+
+                    if (deleteConfirmType === "cancel") {
+                        // cancellation logic
+                        try {
+                            const { error, data } = await supabase.rpc('change_reservation_status', {
+                                p_reservation_id: target.id,
+                                p_new_status: 'cancelled',
+                                p_hotel_id: hotelId,
+                                p_note: 'Silme yerine iptal işlemi (UI List)'
+                            });
+                            if (error) throw error;
+                            if (data && !data.success) throw new Error(data.message);
+                            queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
+                            queryClient.invalidateQueries({ queryKey: ["reservations_stats"] });
+                            setDeleteConfirmOpen(false);
+                        } catch (err: any) {
+                            alert("İptal hatası: " + err.message);
+                        }
                     } else {
-                        queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
-                        queryClient.invalidateQueries({ queryKey: ["reservations_stats"] });
-                        queryClient.invalidateQueries({ queryKey: ["reservations"] });
-                        closeModal();
-                        setDrawerOpen(false);
+                        // hard delete with double confirmation
+                        if (hardDeleteStep === 1) {
+                            setHardDeleteStep(2);
+                            // effectively stay in modal but update UI
+                        } else {
+                            const { error } = await supabase.from("reservations").delete().eq("id", target.id);
+                            if (error) {
+                                alert("Silme hatası: " + error.message);
+                            } else {
+                                queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
+                                queryClient.invalidateQueries({ queryKey: ["reservations_stats"] });
+                                queryClient.invalidateQueries({ queryKey: ["reservations"] });
+                                closeModal();
+                                setDrawerOpen(false);
+                                setDeleteConfirmOpen(false);
+                                setHardDeleteStep(1);
+                            }
+                        }
                     }
                 }}
-                itemName={selectedReservation?.guestName}
+                itemName={selectedReservation?.guestName || (selectedReservation as any)?.full_name}
+                autoClose={false}
             />
         </div>
     );

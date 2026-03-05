@@ -144,11 +144,32 @@ export function useDashboardAnalytics(): DashboardAnalyticsData {
             ]);
 
             setReservations7d(resRes.data || []);
+
+            interface RawFolioEntry {
+                amount: number;
+                base_amount?: number;
+                reservation_id: string | null;
+                created_at: string;
+                item_type: string | null;
+                status: string;
+            }
+
             setFolioItems7d(
-                (folio7dRes.data || []).map((f: any) => ({ ...f, amount: Number(f.base_amount || f.amount) }))
+                (folio7dRes.data as unknown as RawFolioEntry[] || []).map((f) => ({
+                    amount: Number(f.base_amount || f.amount),
+                    reservation_id: f.reservation_id,
+                    created_at: f.created_at,
+                    item_type: f.item_type
+                }))
             );
             setFolioItemsMtd(
-                (folioMtdRes.data || []).map((f: any) => ({ ...f, amount: Number(f.base_amount || f.amount) }))
+                (folioMtdRes.data as unknown as RawFolioEntry[] || []).map((f) => ({
+                    amount: Number(f.base_amount || f.amount),
+                    base_amount: Number(f.base_amount || f.amount),
+                    reservation_id: f.reservation_id,
+                    item_type: f.item_type,
+                    status: f.status
+                }))
             );
 
             // Rooms

@@ -3,7 +3,7 @@ import React from 'react';
 // Shared types for Housekeeping Page
 // Shared types for Housekeeping Page
 export type RoomStatus = 'CLEAN' | 'READY' | 'DIRTY' | 'CLEANING' | 'IN_PROGRESS' | 'INSPECTED' | 'QC_PENDING' | 'OOO' | 'OCCUPIED';
-export type RoomPriority = 'NORMAL' | 'YÜKSEK' | 'VIP';
+export type RoomPriority = 'NORMAL' | 'YÜKSEK' | 'VIP' | 'CHECKIN_TODAY' | 'HIGH_PRIORITY' | 'LATE_CHECKOUT';
 
 export interface Room {
     id: string;
@@ -19,6 +19,7 @@ export interface Room {
         avatar?: string;
     };
     est_duration: number; // in mins
+    actual_duration?: number;
     start_time?: string;
     end_time?: string;
 }

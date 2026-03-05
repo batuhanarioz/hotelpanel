@@ -135,8 +135,8 @@ export function useDashboard() {
             roomNumber: ca.roomNumber,
             adultsCount: ca.adults_count,
             childrenCount: ca.children_count,
-            noShowCandidate: (ca as any).noShowCandidate,
-            noShowCandidateAt: (ca as any).noShowCandidateAt,
+            noShowCandidate: (ca as { no_show_candidate?: boolean }).no_show_candidate,
+            noShowCandidateAt: (ca as { no_show_candidate_at?: string }).no_show_candidate_at,
             reservationNumber: ca.reservationNumber,
             updated_at: ca.updated_at
         };
@@ -399,9 +399,9 @@ export function useDashboard() {
             queryClient.invalidateQueries({ queryKey: ["dashboardReservationsControl"] });
             queryClient.invalidateQueries({ queryKey: ["foliosForReservations"] });
             queryClient.invalidateQueries({ queryKey: ["rooms"] });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Status update error:", err);
-            alert("Durum güncellenemedi: " + err.message);
+            alert("Durum güncellenemedi: " + (err as Error).message);
         }
     };
 

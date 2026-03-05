@@ -8,7 +8,6 @@ import { usePageHeader } from "@/app/components/AppShell";
 import { useHotel } from "@/app/context/HotelContext";
 import { useReservationManagement, CalendarReservation } from "@/hooks/useReservationManagement";
 import { ReservationModal } from "@/app/components/reservations/ReservationModal";
-import { useQueryClient } from "@tanstack/react-query";
 import { ReservationDrawer } from "@/app/components/reservations/ReservationDrawer";
 import { supabase } from "@/lib/supabaseClient";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -49,7 +48,7 @@ export default function BookingBoard() {
         formTime, setFormTime, formDate, setFormDate, staffMembers, guestSearch, setGuestSearch, guestSearchResults,
         guestSearchLoading, selectedGuestId, setSelectedGuestId, duplicateGuest, form, setForm,
         guestMatchInfo, isNewGuest, conflictWarning, matchedGuestPreferences, matchedGuestPassport,
-        openNew, openEdit, handleSubmit, handleDelete, handleUseDuplicate, closeModal, setEditing,
+        openNew, openEdit, handleSubmit, handleCancel, handleUseDuplicate, closeModal, setEditing,
         todaySchedule, rooms,
         isUploading, handleFileUpload, roomBlocks,
         notification, handleExtend, handleMove,
@@ -95,7 +94,6 @@ export default function BookingBoard() {
 
     const dayWidth = isCompact ? 100 : 160;
     const roomHeight = isCompact ? 48 : 72;
-    const headerHeight = 64;
 
     const handlePrev = () => {
         const step = viewMode === "day" ? -7 : viewMode === "month" ? -30 : -7;
@@ -200,7 +198,7 @@ export default function BookingBoard() {
     }, [filteredRooms, groupingMode]);
 
     const visibleRows = useMemo(() => {
-        const rows: { type: 'header' | 'room', id: string, data?: any, groupName?: string }[] = [];
+        const rows: { type: 'header' | 'room', id: string, data?: unknown, groupName?: string }[] = [];
         groupedRooms.forEach(group => {
             if (group.name) {
                 rows.push({ type: 'header', id: group.id, groupName: group.name, data: group });
@@ -303,8 +301,9 @@ export default function BookingBoard() {
             setDrawerOpen(false);
             // Invalidate query
             queryClient.invalidateQueries({ queryKey: ["reservations", selectedDate] });
-        } catch (err: any) {
-            alert("Durum güncellenemedi: " + err.message);
+        } catch (err: unknown) {
+            const error = err as Error;
+            alert("Durum güncellenemedi: " + error.message);
         }
     };
 
@@ -369,8 +368,9 @@ export default function BookingBoard() {
                                                 if (error) throw error;
                                                 alert(`${data.assigned_count} oda başarıyla atandı. ${data.failed_count} hata.`);
                                                 queryClient.invalidateQueries({ queryKey: ["reservations"] });
-                                            } catch (err: any) {
-                                                alert("Hata: " + err.message);
+                                            } catch (err: unknown) {
+                                                const error = err as Error;
+                                                alert("Hata: " + error.message);
                                             }
                                         }
                                     }}
@@ -421,7 +421,7 @@ export default function BookingBoard() {
                     </div>
 
                     <div className="flex gap-2">
-                        <select value={groupingMode} onChange={(e) => setGroupingMode(e.target.value as any)} className="flex-1 bg-white border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-wider rounded-xl px-3 h-10 shadow-sm outline-none cursor-pointer hover:border-indigo-500 transition-all text-center">
+                        <select value={groupingMode} onChange={(e) => setGroupingMode(e.target.value as "none" | "floor" | "type")} className="flex-1 bg-white border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-wider rounded-xl px-3 h-10 shadow-sm outline-none cursor-pointer hover:border-indigo-500 transition-all text-center">
                             <option value="none">GRUP: YOK</option>
                             <option value="floor">KAT</option>
                             <option value="type">TİP</option>
@@ -437,7 +437,7 @@ export default function BookingBoard() {
                 <div className="flex items-center justify-between p-2 md:px-4 md:py-2 border-t border-slate-100 bg-white">
                     <div className="flex bg-slate-100 rounded-xl p-1 gap-1 w-full sm:w-auto">
                         {[{ id: "all", label: "TÜMÜ" }, { id: "confirmed", label: "ONAYLI" }, { id: "checked_in", label: "GİRİŞ" }].map((s) => (
-                            <button key={s.id} onClick={() => setStatusFilter(s.id as any)} className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex-1 sm:flex-none ${statusFilter === s.id ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{s.label}</button>
+                            <button key={s.id} onClick={() => setStatusFilter(s.id)} className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex-1 sm:flex-none ${statusFilter === s.id ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{s.label}</button>
                         ))}
                     </div>
 
@@ -493,7 +493,7 @@ export default function BookingBoard() {
                                             <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="m19 9-7 7-7-7" /></svg>
                                         </span>
                                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{row.groupName}</span>
-                                        <span className="text-[10px] font-bold text-slate-300">({(row.data as { rooms: any[] }).rooms.length} Oda)</span>
+                                        <span className="text-[10px] font-bold text-slate-300">({(row.data as { rooms: unknown[] }).rooms.length} Oda)</span>
                                     </div>
                                 );
                             }
@@ -761,7 +761,7 @@ export default function BookingBoard() {
                 onStatusChange={handleStatusChange}
                 onExtend={handleExtend}
                 onMove={handleMove}
-                onDelete={(res) => {
+                onCancel={(res) => {
                     setSelectedReservation(res);
                     setEditing(res);
                     setDeleteConfirmOpen(true);
@@ -797,7 +797,7 @@ export default function BookingBoard() {
                         matchedGuestPassport={matchedGuestPassport}
                         conflictWarning={conflictWarning}
                         handleSubmit={handleSubmit}
-                        handleDelete={() => setDeleteConfirmOpen(true)}
+                        handleCancel={() => setDeleteConfirmOpen(true)}
                         handleUseDuplicate={handleUseDuplicate}
                         rooms={rooms}
                         isUploading={isUploading}
@@ -828,7 +828,10 @@ export default function BookingBoard() {
             <DeleteConfirmationModal
                 isOpen={deleteConfirmOpen}
                 onClose={() => setDeleteConfirmOpen(false)}
-                onConfirm={handleDelete}
+                onConfirm={handleCancel}
+                title="Rezervasyonu İptal Et"
+                description="Bu rezervasyonu iptal etmek istediğinize emin misiniz? Bu işlem geri alınabilir."
+                confirmText="Evet, İptal Et"
                 itemName={editing?.guestName}
             />
 

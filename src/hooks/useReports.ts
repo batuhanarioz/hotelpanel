@@ -77,7 +77,7 @@ export function useReports() {
         const resData = (resRes.data || []).map((r) => ({ ...r })) as unknown as ReservationRow[];
         setReservations(resData);
 
-        const folioData = (folioRes.data || []).map((r: any) => ({ ...r, amount: Number(r.base_amount || r.amount) })) as unknown as FolioRow[];
+        const folioData = (folioRes.data || []).map((r: { base_amount?: number; amount?: number }) => ({ ...r, amount: Number(r.base_amount || r.amount) })) as unknown as FolioRow[];
         setFolios(folioData);
         setDoctors(docRes.data || []);
 

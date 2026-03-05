@@ -24,9 +24,11 @@ interface RawRes {
     infants_count?: number;
     nightly_rate?: number;
     payment_status?: string;
-    additional_guests?: any[];
+    additional_guests?: { fullName: string; identityNo: string; birthDate: string; identityPhotoUrl: string; phone: string; storagePath?: string }[];
     deposit_amount?: number;
     reservation_number?: string;
+    no_show_candidate?: boolean;
+    no_show_candidate_at?: string;
     room?: { room_number: string } | { room_number: string }[];
 }
 
@@ -103,7 +105,18 @@ export async function getReservationsForDate(
         staffIds.length ? supabase.from("users").select("id, full_name").eq("hotel_id", hotelId).in("id", staffIds) : Promise.resolve({ data: [], error: null }),
     ]);
 
-    const guestsMap = Object.fromEntries((guestsRes.data || []).map((p: any) => [p.id, p]));
+    interface Guest {
+        id: string;
+        full_name: string;
+        phone: string;
+        email: string;
+        birth_date: string;
+        preferences_note?: string;
+        passport_number?: string;
+        identity_photo_url?: string;
+    }
+
+    const guestsMap = Object.fromEntries((guestsRes.data || []).map((p) => [p.id, p as Guest]));
     const staffMap = Object.fromEntries((staffRes.data || []).map((d: { id: string, full_name: string }) => [d.id, d.full_name]));
 
     // ... map logic follows but maps to existing structures ...
@@ -111,7 +124,7 @@ export async function getReservationsForDate(
         const startDate = new Date(row.check_in_date);
         const endDate = new Date(row.check_out_date);
         const durationMinutes = Math.max(10, Math.round((endDate.getTime() - startDate.getTime()) / 60000) || 30);
-        const guest = guestsMap[row.guest_id];
+        const guest = guestsMap[row.guest_id] as Guest | undefined;
 
         const trTime = new Intl.DateTimeFormat('tr-TR', {
             timeZone: 'Asia/Istanbul',
@@ -168,8 +181,8 @@ export async function getReservationsForDate(
             additional_guests: row.additional_guests,
             deposit_amount: row.deposit_amount,
             identityPhotoUrl: guest?.identity_photo_url,
-            noShowCandidate: (row as any).no_show_candidate,
-            noShowCandidateAt: (row as any).no_show_candidate_at,
+            noShowCandidate: row.no_show_candidate,
+            noShowCandidateAt: row.no_show_candidate_at,
         };
     });
 
@@ -311,32 +324,45 @@ export async function getGuestDetails(guestId: string) {
     const { data: staffData } = staffIds.length ? await supabase.from("users").select("id, full_name").in("id", staffIds) : { data: [] };
     const staffMap = Object.fromEntries((staffData || []).map((s: { id: string, full_name: string }) => [s.id, s.full_name]));
 
+    interface ReservationRow {
+        id: string;
+        check_in_date: string;
+        check_out_date: string;
+        status: string;
+        room: { room_number: string | null } | { room_number: string | null }[] | null;
+        guest_note: string | null;
+        internal_note: string | null;
+        board_type: string | null;
+        assigned_staff_id: string | null;
+    }
+
     return {
-        reservations: (reservations || []).map((row: any) => {
-            const roomNumber = Array.isArray(row.room) ? row.room[0]?.room_number : row.room?.room_number;
+        reservations: (reservations || []).map((row: unknown) => {
+            const r = row as ReservationRow;
+            const roomNumber = Array.isArray(r.room) ? r.room[0]?.room_number : r.room?.room_number;
             return {
-                id: row.id,
-                check_in_date: row.check_in_date,
-                check_out_date: row.check_out_date,
-                status: row.status,
+                id: r.id,
+                check_in_date: r.check_in_date,
+                check_out_date: r.check_out_date,
+                status: r.status,
                 room_number: roomNumber || null,
-                guest_note: row.guest_note || null,
-                internal_note: row.internal_note || null,
-                board_type: row.board_type || null,
-                role: row.assigned_staff_id ? staffMap[row.assigned_staff_id] : null,
+                guest_note: r.guest_note || null,
+                internal_note: r.internal_note || null,
+                board_type: r.board_type || null,
+                role: r.assigned_staff_id ? staffMap[r.assigned_staff_id] : null,
             };
         }),
-        folios: (folios || []).map((row: any) => {
+        folios: (folios || []).map((row: Record<string, unknown>) => {
             return {
-                id: row.id!,
+                id: row.id as string,
                 amount: Number(row.amount),
                 base_amount: Number(row.base_amount || row.amount),
-                description: row.description || null,
-                item_type: row.item_type || null,
-                item_name: row.description || row.item_type || "Hizmet",
-                status: row.status || "posted",
-                created_at: row.created_at || null,
-                reservation_id: row.reservation_id,
+                description: (row.description as string) || null,
+                item_type: (row.item_type as string) || null,
+                item_name: (row.description as string) || (row.item_type as string) || "Hizmet",
+                status: (row.status as string) || "posted",
+                created_at: (row.created_at as string) || null,
+                reservation_id: row.reservation_id as string,
             };
         }),
         auditLogs: auditLogs || [],
@@ -355,7 +381,7 @@ export async function mergeGuests(hotelId: string, parentGuestId: string, childG
     return data;
 }
 
-export async function logExport(hotelId: string, entityType: string, recordCount: number, filters: any = {}) {
+export async function logExport(hotelId: string, entityType: string, recordCount: number, filters: Record<string, unknown> = {}) {
     const { error } = await supabase.rpc('log_export', {
         p_hotel_id: hotelId,
         p_entity_type: entityType,

@@ -164,8 +164,9 @@ export function useAdminUsers() {
                 setNewEmail(""); setNewFullName(""); setNewPassword(""); setNewDepartment("");
                 await refreshUsers();
             }
-        } catch (err: any) {
-            setError(err.message || "İşlem sırasında bir hata oluştu.");
+        } catch (err: unknown) {
+            const error = err as Error;
+            setError(error.message || "İşlem sırasında bir hata oluştu.");
         } finally {
             setSaving(false);
         }
@@ -197,8 +198,9 @@ export function useAdminUsers() {
             const data = await res.json();
             if (data.error) setError(data.error);
             else { setShowEditModal(false); setSelectedUser(null); await refreshUsers(); }
-        } catch (err: any) {
-            setError(err.message || "Güncelleme sırasında bir hata oluştu.");
+        } catch (err: unknown) {
+            const error = err as Error;
+            setError(error.message || "Güncelleme sırasında bir hata oluştu.");
         } finally {
             setEditSaving(false);
         }
@@ -218,8 +220,9 @@ export function useAdminUsers() {
             const data = await res.json();
             if (data.error) setResetError(data.error);
             else setResetSuccess(true);
-        } catch (err: any) {
-            setResetError(err.message || "Şifre sıfırlama sırasında bir hata oluştu.");
+        } catch (err: unknown) {
+            const error = err as Error;
+            setResetError(error.message || "Şifre sıfırlama sırasında bir hata oluştu.");
         } finally {
             setResetSaving(false);
         }

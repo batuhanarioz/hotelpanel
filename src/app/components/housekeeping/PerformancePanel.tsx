@@ -17,9 +17,7 @@ export function PerformancePanel({ rooms, staffList }: PerformancePanelProps) {
         : 22;
 
     const delayedRooms = rooms.filter(r => (r.status === 'DIRTY' || r.status === 'CLEANING') && (r.priority === 'VIP' || r.priority === 'CHECKIN_TODAY')).length;
-    const inspectionRate = rooms.length > 0
-        ? Math.round((rooms.filter(r => r.status === 'CLEAN' || r.status === 'INSPECTED').length / rooms.length) * 100)
-        : 0;
+
 
     return (
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mt-8 p-6 lg:p-8">

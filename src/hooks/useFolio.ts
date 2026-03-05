@@ -7,6 +7,19 @@ export type LedgerItemType = "room_charge" | "service_charge" | "payment" | "ref
 
 export type CurrencyType = "TRY" | "EUR" | "USD" | "GBP";
 
+export interface AuditLogEntry {
+    id: string;
+    action: string;
+    actor_id?: string;
+    actor_name?: string;
+    created_at: string;
+    details?: {
+        description?: string;
+        amount?: number;
+        currency?: string;
+    };
+}
+
 export interface FolioItem {
     id: string;
     amount: number;
@@ -16,7 +29,7 @@ export interface FolioItem {
     source: "system" | "ui" | "integration";
     created_at: string;
     created_by: string;
-    metadata?: any;
+    metadata?: Record<string, unknown>;
     debit?: number;
     credit?: number;
     runningBalance?: number;
@@ -145,10 +158,9 @@ export function useFolio() {
     const [relatedPaymentId, setRelatedPaymentId] = useState("");
     const [paymentExchangeRate, setPaymentExchangeRate] = useState<number>(1);
 
-    const [currencyRates, setCurrencyRates] = useState<any[]>([]);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
     const [itemToCancel, setItemToCancel] = useState<{ folioId: string, item: FolioItem } | null>(null);
-    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+    const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
     const [usersMap, setUsersMap] = useState<Record<string, string>>({});
     const [userRole, setUserRole] = useState<string>("RECEPTION");
 
@@ -157,21 +169,7 @@ export function useFolio() {
         setTimeout(() => setToast(null), 3000);
     };
 
-    const loadCurrencyRates = useCallback(async () => {
-        if (!hotelId) return;
-        try {
-            const { data, error: fetchError } = await supabase
-                .from("currency_rates")
-                .select("*")
-                .eq("hotel_id", hotelId)
-                .eq("rate_date", today);
 
-            if (fetchError) throw fetchError;
-            setCurrencyRates(data || []);
-        } catch (err) {
-            console.error("loadCurrencyRates error:", err);
-        }
-    }, [hotelId, today]);
 
     const loadUsers = useCallback(async () => {
         if (!hotelId) return;
@@ -185,7 +183,7 @@ export function useFolio() {
 
             if (error) throw error;
             const map: Record<string, string> = {};
-            (data || []).forEach((u: any) => {
+            (data || []).forEach((u) => {
                 map[u.id] = u.full_name || u.id;
                 if (user && u.id === user.id) {
                     setUserRole(u.role);
@@ -267,30 +265,54 @@ export function useFolio() {
             console.log("loadFolios fetch result:", { dataCount: data?.length, error: fetchError });
             if (fetchError) throw fetchError;
 
-            const mapped = (data || []).map((res: any) => {
-                const items = (res.items || []).map((item: any): FolioItem => ({
+            interface FolioSupabaseRow {
+                id: string;
+                check_in_date: string;
+                check_out_date: string;
+                status: string;
+                adults_count: number | null;
+                children_count: number | null;
+                estimated_amount: number | null;
+                currency: string | null;
+                guest: { full_name: string | null; phone: string | null } | { full_name: string | null; phone: string | null }[] | null;
+                room: { room_number: string | null } | { room_number: string | null }[] | null;
+                items: {
+                    id: string;
+                    amount: number;
+                    currency: string | null;
+                    item_type: string | null;
+                    description: string | null;
+                    created_at: string | null;
+                    created_by: string | null;
+                    source: string | null;
+                    metadata: Record<string, unknown> | null;
+                }[];
+            }
+
+            const mapped = (data || []).map((res: unknown) => {
+                const resRow = res as FolioSupabaseRow;
+                const items = (resRow.items || []).map((item): FolioItem => ({
                     id: item.id,
                     amount: Number(item.amount) || 0,
                     currency: (item.currency || "TRY") as CurrencyType,
-                    type: (item.type || "room_charge") as LedgerItemType,
+                    type: (item.item_type || "room_charge") as LedgerItemType,
                     description: item.description,
                     created_at: item.created_at || new Date().toISOString(),
                     created_by: item.created_by ? usersMap[item.created_by] || item.created_by : "System",
-                    source: item.source || "ui",
+                    source: (item.source || "ui") as "system" | "ui" | "integration",
                     metadata: item.metadata || {}
                 }));
 
-                // Virtual Accommodation Charge if no real charges exist yet
                 const hasAccommodation = items.some((i: FolioItem) => i.type === "room_charge" || i.type === "accommodation" || i.type === "charge");
-                const resAmount = Number(res.estimated_amount || 0);
+                const resAmount = Number(resRow.estimated_amount || 0);
                 if (!hasAccommodation && resAmount > 0) {
                     items.push({
-                        id: `virtual-acc-${res.id}`,
+                        id: `virtual-acc-${resRow.id}`,
                         amount: resAmount,
-                        currency: (res.currency || "TRY") as CurrencyType,
+                        currency: (resRow.currency || "TRY") as CurrencyType,
                         type: "accommodation",
                         description: "Konaklama Ücreti (Sistem Beklentisi)",
-                        created_at: res.check_in_date || new Date().toISOString(),
+                        created_at: resRow.check_in_date || new Date().toISOString(),
                         created_by: "Sistem",
                         source: "system",
                         metadata: { virtual: true }
@@ -298,21 +320,17 @@ export function useFolio() {
                 }
 
                 const finances = computeFolioFinances(items);
+                const guestCount = (resRow.adults_count || 0) + (resRow.children_count || 0);
 
-                // --- DEBUG BİLGİSİ ---
-                if (items.length > 0) {
-                    console.log(`Folio ID ${res.id} işlemleri:`, items);
-                    console.log(`Folio ID ${res.id} finans özeti:`, finances);
-                }
-                // ---------------------
-                const guestCount = (res.adults_count || 0) + (res.children_count || 0);
+                const guestInfo = Array.isArray(resRow.guest) ? resRow.guest[0] : resRow.guest;
+                const roomInfo = Array.isArray(resRow.room) ? resRow.room[0] : resRow.room;
 
                 return {
-                    id: res.id,
-                    guest_name: res.guest?.full_name || "İsimsiz",
-                    room_number: res.room?.room_number || "---",
-                    check_in_date: res.check_in_date,
-                    check_out_date: res.check_out_date,
+                    id: resRow.id,
+                    guest_name: guestInfo?.full_name || "İsimsiz",
+                    room_number: roomInfo?.room_number || "---",
+                    check_in_date: resRow.check_in_date,
+                    check_out_date: resRow.check_out_date,
                     currency: "TRY" as CurrencyType,
                     guest_count: guestCount,
                     ...finances
@@ -320,18 +338,17 @@ export function useFolio() {
             });
 
             setFolios(mapped);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("loadFolios error string:", String(err));
             console.error("loadFolios error JSON:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
         } finally {
             setLoading(false);
         }
-    }, [hotelId, usersMap]);
+    }, [hotelId, usersMap, page, pageSize, listSearch, roomSearch, statusFilter]);
 
     useEffect(() => {
-        loadCurrencyRates();
         loadUsers();
-    }, [loadCurrencyRates, loadUsers]);
+    }, [loadUsers]);
 
     useEffect(() => {
         loadFolios();
@@ -427,9 +444,11 @@ export function useFolio() {
             setReferenceNo("");
             setPaymentType("payment");
             showToast("İşlem başarıyla kaydedildi.", "success");
-        } catch (err: any) {
-            console.error("handleAddFolioItem error:", err.message || err);
-            const msg = err.message || (typeof err === "string" ? err : "İşlem kaydedilemedi.");
+            showToast("İşlem başarıyla kaydedildi.", "success");
+        } catch (err: unknown) {
+            const error = err as Error;
+            console.error("handleAddFolioItem error:", error.message || err);
+            const msg = error.message || (typeof err === "string" ? err : "İşlem kaydedilemedi.");
             showToast(msg, "error");
         } finally {
             setSavingPayment(false);
@@ -461,9 +480,11 @@ export function useFolio() {
             if (insertError) throw insertError;
             await loadFolios();
             showToast("İşlem kaydedildi.", "success");
-        } catch (err: any) {
-            console.error("submitGlobalFinanceItem error:", err.message || err);
-            const msg = err.message || "İşlem kaydedilemedi.";
+            showToast("İşlem kaydedildi.", "success");
+        } catch (err: unknown) {
+            const error = err as Error;
+            console.error("submitGlobalFinanceItem error:", error.message || err);
+            const msg = error.message || "İşlem kaydedilemedi.";
             showToast(msg, "error");
         } finally {
             setSavingPayment(false);
@@ -506,9 +527,9 @@ export function useFolio() {
 
             await loadFolios();
             showToast("İşlem düzeltme kaydı ile iptal edildi.", "success");
-        } catch (err: any) {
-            console.error("confirmCancelFolioItem error:", err.message || err);
-            const msg = err.message || "İşlem iptal edilemedi.";
+        } catch (err: unknown) {
+            console.error("confirmCancelFolioItem error:", (err as Error).message || err);
+            const msg = (err as Error).message || "İşlem iptal edilemedi.";
             showToast(msg, "error");
         } finally {
             setItemToCancel(null);

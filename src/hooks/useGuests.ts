@@ -57,6 +57,26 @@ export type GuestFolio = {
     reservation_id: string;
 };
 
+export interface AuditLog {
+    id: string;
+    action: string;
+    created_at: string;
+    actor?: { full_name: string | null };
+}
+
+export interface FinancialSummary {
+    total_spent: number;
+    open_balance: number;
+    last_payment_date: string | null;
+}
+
+export interface GuestDetailData {
+    reservations: GuestReservation[];
+    folios: GuestFolio[];
+    auditLogs: AuditLog[];
+    financialSummary: FinancialSummary | null;
+}
+
 const PAGE_SIZE = 10;
 
 export function useGuests() {
@@ -85,8 +105,8 @@ export function useGuests() {
 
     const reservations = detailData?.reservations || [];
     const folios = detailData?.folios || [];
-    const auditLogs = (detailData as any)?.auditLogs || [];
-    const financialSummary = (detailData as any)?.financialSummary || null;
+    const auditLogs = detailData?.auditLogs || [];
+    const financialSummary = detailData?.financialSummary || null;
 
     const selectedGuest = useMemo(() => {
         if (!selectedGuestId) return null;
@@ -159,7 +179,7 @@ export function useGuests() {
             return false;
         }
 
-        const payload: any = { ...validation.data };
+        const payload: Partial<GuestRow> & { marketing_consent_at?: string } = { ...validation.data };
 
         // Enterprise: Handle Marketing Consent Timestamp
         if (payload.marketing_consent === true && selectedGuest?.marketing_consent !== true) {
@@ -228,7 +248,8 @@ export function useGuests() {
             queryClient.invalidateQueries({ queryKey: ["guests"] });
             queryClient.invalidateQueries({ queryKey: ["guestDetails", existingId] });
             return true;
-        } catch (error: any) {
+        } catch (err: unknown) {
+            const error = err as Error;
             Sentry.captureException(error, { tags: { section: "guests", action: "merge" } });
             alert(error.message);
             return false;
@@ -238,7 +259,7 @@ export function useGuests() {
     const createGuest = async (data: Partial<GuestRow>) => {
         if (!hotelCtx.hotelId) return null;
 
-        const payload: any = { ...data, hotel_id: hotelCtx.hotelId };
+        const payload: Partial<GuestRow> & { hotel_id: string; marketing_consent_at?: string | null } = { ...data, hotel_id: hotelCtx.hotelId };
 
         // Normalization
         if (payload.phone) payload.phone = payload.phone.replace(/\s+/g, "");

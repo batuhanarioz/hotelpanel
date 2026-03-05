@@ -88,7 +88,7 @@ export function RatePlanManagement() {
 
     const handleBulkUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!bulkPlanId || !bulkStart || !bulkEnd) {
+        if (!hotelId || !bulkPlanId || !bulkStart || !bulkEnd) {
             alert("Lütfen tüm alanları doldurun.");
             return;
         }
@@ -106,7 +106,7 @@ export function RatePlanManagement() {
                 return;
             }
 
-            const daysToUpdate: any[] = [];
+            const daysToUpdate: Partial<DailyPrice>[] = [];
 
             let curr = start;
             while (curr <= end) {

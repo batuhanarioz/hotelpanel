@@ -71,9 +71,21 @@ export function usePaymentManagement(reservationIdParam: string | null) {
             setError(error.message);
             Sentry.captureException(error);
         } else {
-            const mappedData = (data || []).map((item: any) => {
-                const guestInfo = Array.isArray(item.reservation) ? item.reservation[0]?.guest : item.reservation?.guest;
-                const guestObj = Array.isArray(guestInfo) ? guestInfo[0] : guestInfo;
+            interface FolioTransactionRow {
+                id: string;
+                amount: number;
+                base_amount: number | null;
+                created_at: string;
+                item_type: string | null;
+                description: string | null;
+                status: string | null;
+                reservation: { guest: { full_name: string | null; phone: string | null } | { full_name: string | null; phone: string | null }[] | null } | { guest: { full_name: string | null; phone: string | null } | { full_name: string | null; phone: string | null }[] | null }[] | null;
+            }
+
+            const mappedData = (data || []).map((res: unknown) => {
+                const item = res as FolioTransactionRow;
+                const reservation = Array.isArray(item.reservation) ? item.reservation[0] : item.reservation;
+                const guest = Array.isArray(reservation?.guest) ? reservation.guest[0] : reservation?.guest;
                 return {
                     id: item.id,
                     amount: item.base_amount || item.amount,
@@ -82,8 +94,8 @@ export function usePaymentManagement(reservationIdParam: string | null) {
                     status: item.status || "posted",
                     note: item.description,
                     guest: {
-                        full_name: guestObj?.full_name || "Bilinmeyen Misafir",
-                        phone: guestObj?.phone || null
+                        full_name: guest?.full_name || "Bilinmeyen Misafir",
+                        phone: guest?.phone || null
                     }
                 };
             });

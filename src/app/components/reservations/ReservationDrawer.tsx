@@ -17,7 +17,7 @@ interface ReservationDrawerProps {
     onStatusChange: (res: CalendarReservation, newStatus: string, note?: string) => void;
     onExtend: (res: CalendarReservation) => void;
     onMove: (res: CalendarReservation) => void;
-    onDelete?: (res: CalendarReservation) => void;
+    onCancel?: (res: CalendarReservation) => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -36,7 +36,7 @@ const STATUS_COLORS: Record<string, string> = {
     no_show: "bg-orange-100 text-orange-700",
 };
 
-export function ReservationDrawer({ isOpen, onClose, reservation, onEdit, onStatusChange, onExtend, onMove, onDelete }: ReservationDrawerProps) {
+export function ReservationDrawer({ isOpen, onClose, reservation, onEdit, onStatusChange, onExtend, onMove, onCancel }: ReservationDrawerProps) {
     const [copiedId, setCopiedId] = React.useState(false);
     const [copiedPhone, setCopiedPhone] = React.useState(false);
     const queryClient = useQueryClient();
@@ -252,8 +252,8 @@ export function ReservationDrawer({ isOpen, onClose, reservation, onEdit, onStat
                                                     if (data && !data.success) throw new Error(data.message);
                                                     alert(`Oda başarıyla atandı: #${data.room_number}`);
                                                     queryClient.invalidateQueries({ queryKey: ["reservations"] });
-                                                } catch (err: any) {
-                                                    alert("Hata: " + err.message);
+                                                } catch (err: unknown) {
+                                                    alert("Hata: " + (err as Error).message);
                                                 }
                                             }
                                         }}
@@ -356,10 +356,11 @@ export function ReservationDrawer({ isOpen, onClose, reservation, onEdit, onStat
                         Tüm Detayları Düzenle
                     </button>
                     <button
-                        onClick={() => onDelete?.(reservation)}
+                        onClick={() => onCancel?.(reservation)}
                         className="p-3.5 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-rose-500 hover:border-rose-100 transition-all"
+                        title="Rezervasyonu İptal Et"
                     >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.36 6.64a9 9 0 1 1-12.73 12.73 9 9 0 0 1 12.73-12.73zM6.01 6.01l11.98 11.98" /></svg>
                     </button>
                 </div>
             </div>

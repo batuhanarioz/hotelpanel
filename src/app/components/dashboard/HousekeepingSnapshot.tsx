@@ -2,7 +2,7 @@
 
 import React from "react";
 import { HousekeepingTask } from "@/types/database";
-import { ChevronRight, Home, Info } from "lucide-react";
+import { ChevronRight, Home } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 

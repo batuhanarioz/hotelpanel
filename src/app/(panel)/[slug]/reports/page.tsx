@@ -17,6 +17,14 @@ interface RevenueData {
   room: number;
   extra: number;
   total: number;
+  reservationCount?: number;
+}
+
+interface FilterState {
+  dateRange?: {
+    start?: string;
+    end?: string;
+  };
 }
 
 interface OccupancyData {
@@ -106,13 +114,13 @@ export default function ReportsPage() {
       if (!hotelId || !filters) return;
       setLoading(true);
 
-      const f = filters as any;
+      const f = filters as FilterState;
       const startDate = f.dateRange?.start || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
       const endDate = f.dateRange?.end || new Date().toISOString().split('T')[0];
 
       try {
         // 1. KPI & Financial Metrics
-        let metricsQuery = supabase
+        const metricsQuery = supabase
           .from("financial_metrics_view")
           .select("*")
           .eq("hotel_id", hotelId)
@@ -376,9 +384,9 @@ export default function ReportsPage() {
             Rezervasyon Performansı
           </h2>
           <ReservationAnalytics
-            volumeTrend={revenueData.map(d => ({ date: d.date, count: (d as any).reservationCount || 0 }))}
+            volumeTrend={revenueData.map(d => ({ date: d.date, count: d.reservationCount || 0 }))}
             leadTimeData={leadTimeData}
-            pickupReport={revenueData.map(d => ({ date: d.date, count: (d as any).reservationCount || 0 }))}
+            pickupReport={revenueData.map(d => ({ date: d.date, count: d.reservationCount || 0 }))}
           />
         </section>
 

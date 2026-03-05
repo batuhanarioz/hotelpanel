@@ -45,12 +45,12 @@ export function DashboardQuickLinks({ isAdmin, onConfigClick }: DashboardQuickLi
                     </div>
                 </div>
                 <div className="px-5 py-4 space-y-3">
-                    {ROLE_DESCRIPTIONS.map((r) => (
-                        <div key={r.role} className="flex items-start gap-2.5">
-                            <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold border shrink-0 mt-0.5 ${ROLE_BADGE_COLORS[r.role]}`}>
-                                {ROLE_LABELS[r.role] || r.role}
+                    {Object.entries(ROLE_DESCRIPTIONS).map(([role, desc]) => (
+                        <div key={role} className="flex items-start gap-2.5">
+                            <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold border shrink-0 mt-0.5 ${ROLE_BADGE_COLORS[role]}`}>
+                                {ROLE_LABELS[role] || role}
                             </span>
-                            <span className="text-[11px] text-slate-600 leading-relaxed">{r.desc}</span>
+                            <span className="text-[11px] text-slate-600 leading-relaxed">{desc}</span>
                         </div>
                     ))}
                     <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">

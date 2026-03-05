@@ -11,7 +11,7 @@ import { NightAuditCard } from "@/app/components/dashboard/NightAuditCard";
 import { ReservationDetailDrawer } from "@/app/components/dashboard/ReservationDetailDrawer";
 import { ArrivalsWidget } from "@/app/components/ops-dashboard/ArrivalsWidget";
 import { DeparturesWidget } from "@/app/components/ops-dashboard/DeparturesWidget";
-import { OperationAlerts } from "@/app/components/ops-dashboard/OperationAlerts";
+
 import NoShowCandidatesWidget from "@/app/components/dashboard/NoShowCandidatesWidget";
 import Link from "next/link";
 
@@ -475,11 +475,8 @@ export default function DashboardView() {
     const slugStr = Array.isArray(slug) ? slug[0] : slug ?? "";
 
     const {
-        reservations,
         loading: dashboardLoading,
         handleStatusChange,
-        handleAssignStaff,
-        staffMembers,
         stats,
         noShowCandidates,
     } = useDashboard();
@@ -789,8 +786,6 @@ export default function DashboardView() {
                 reservationId={selectedReservationId}
                 onClose={() => setSelectedReservationId(null)}
                 onStatusChange={handleStatusChange}
-                onAssignStaff={handleAssignStaff}
-                staffMembers={staffMembers}
             />
         </div>
     );

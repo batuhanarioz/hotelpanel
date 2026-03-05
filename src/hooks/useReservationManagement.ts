@@ -50,7 +50,7 @@ export type CalendarReservation = {
     deposit_amount?: number;
     total_amount?: number;
     currency?: string;
-    additional_guests?: any[];
+    additional_guests?: { fullName: string; identityNo: string; birthDate: string; identityPhotoUrl: string; phone: string; storagePath?: string }[];
     identityPhotoUrl?: string | null;
     noShowCandidate?: boolean;
     noShowCandidateAt?: string;
@@ -250,7 +250,7 @@ export function useReservationManagement(initialData?: {
         setGuestMatchInfo(null);
         setMatchedGuestPreferences(null);
         setMatchedGuestPassport(null);
-    }, [staffMembers]);
+    }, [staffMembers, hotelCtx.defaultCurrency]);
 
     const handleFileUpload = async (file: File, guestIndex?: number) => {
         if (!hotelCtx.hotelId) return null;
@@ -422,8 +422,8 @@ export function useReservationManagement(initialData?: {
             additionalGuests: (appt as Record<string, unknown>).additional_guests as { fullName: string; identityNo: string; birthDate: string; identityPhotoUrl: string; phone: string }[] ?? [],
             nightlyRate: (appt as Record<string, unknown>).nightly_rate as number ?? 0,
             totalAmount: (appt as Record<string, unknown>).estimated_amount ? Number((appt as Record<string, unknown>).estimated_amount) : 0,
-            depositAmount: (appt as any).deposit_amount as number ?? 0,
-            paymentStatus: (appt as any).payment_status as string ?? "unpaid",
+            depositAmount: (appt as Record<string, unknown>).deposit_amount as number ?? 0,
+            paymentStatus: (appt as Record<string, unknown>).payment_status as string ?? "unpaid",
             currency: appt.currency || hotelCtx.defaultCurrency || "TRY",
             identityPhotoUrl: appt.identityPhotoUrl || "",
             storagePath: "",
@@ -502,13 +502,37 @@ export function useReservationManagement(initialData?: {
                 return;
             }
 
-            const { data: p, error: pError } = await supabase.from("guests").insert({
-                hotel_id: hotelCtx.hotelId,
-                identity_photo_url: form.identityPhotoUrl || null,
-                ...guestValidation.data
-            }).select("id").single();
-            if (pError) { alert("Misafir kaydı yapılamadı: " + pError.message); return; }
-            guestId = p.id;
+            // Fix for duplicate guest issue: Check if guest with same identity_no exists for this hotel
+            let existingGuestId: string | null = null;
+            if (form.identityNo) {
+                const { data: existing } = await supabase
+                    .from("guests")
+                    .select("id")
+                    .eq("hotel_id", hotelCtx.hotelId)
+                    .eq("identity_no", form.identityNo)
+                    .eq("is_active", true)
+                    .maybeSingle();
+                if (existing) {
+                    existingGuestId = existing.id;
+                    // Update existing guest info to latest form data
+                    await supabase.from("guests").update({
+                        ...guestValidation.data,
+                        identity_photo_url: form.identityPhotoUrl || null,
+                    }).eq("id", existingGuestId);
+                }
+            }
+
+            if (existingGuestId) {
+                guestId = existingGuestId;
+            } else {
+                const { data: p, error: pError } = await supabase.from("guests").insert({
+                    hotel_id: hotelCtx.hotelId,
+                    identity_photo_url: form.identityPhotoUrl || null,
+                    ...guestValidation.data
+                }).select("id").single();
+                if (pError) { alert("Misafir kaydı yapılamadı: " + pError.message); return; }
+                guestId = p.id;
+            }
         } else {
             // Update guest if info changed
             const guestValidation = guestSchema.partial().safeParse({
@@ -673,9 +697,10 @@ export function useReservationManagement(initialData?: {
             closeModal();
             setTimeout(() => setNotification(null), 3000);
             queryClient.invalidateQueries({ queryKey: ["reservations"] });
-        } catch (e: any) {
-            console.error("Unexpected error during submission:", e);
-            setNotification({ message: "İşlem sırasında bir hata oluştu: " + e.message, type: 'error' });
+        } catch (e: unknown) {
+            const error = e as Error;
+            console.error("Unexpected error during submission:", error);
+            setNotification({ message: "İşlem sırasında bir hata oluştu: " + error.message, type: 'error' });
             setTimeout(() => setNotification(null), 4000);
         }
     };
@@ -731,19 +756,46 @@ export function useReservationManagement(initialData?: {
         return Array.from(slots).sort((a, b) => a - b);
     }, [todaySchedule, reservations]);
 
-    const handleDelete = async () => {
+    const handleCancel = async () => {
         if (!editing) return;
-        const { error } = await supabase.from("reservations").delete().eq("id", editing.id);
-        if (error) {
-            Sentry.captureException(error, { tags: { section: "reservations", action: "delete" } });
-            setNotification({ message: "Silme hatası: " + error.message, type: 'error' });
-            setTimeout(() => setNotification(null), 4000);
-        }
-        else {
+        try {
+            const { error, data } = await supabase.rpc('change_reservation_status', {
+                p_reservation_id: editing.id,
+                p_new_status: 'cancelled',
+                p_hotel_id: hotelCtx.hotelId,
+                p_note: 'Silme yerine iptal işlemi (UI)'
+            });
+
+            if (error) throw error;
+            if (data && !data.success) throw new Error(data.message);
+
             closeModal();
             queryClient.invalidateQueries({ queryKey: ["reservations"] });
             queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
             queryClient.invalidateQueries({ queryKey: ["reservations_stats"] });
+        } catch (err: any) {
+            console.error("Cancellation error:", err);
+            setNotification({ message: "İptal hatası: " + (err.message || err.toString()), type: 'error' });
+            setTimeout(() => setNotification(null), 4000);
+        }
+    };
+
+    const handleHardDelete = async (id?: string) => {
+        const targetId = id || editing?.id;
+        if (!targetId) return;
+
+        try {
+            const { error } = await supabase.from("reservations").delete().eq("id", targetId);
+            if (error) throw error;
+
+            closeModal();
+            queryClient.invalidateQueries({ queryKey: ["reservations"] });
+            queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
+            queryClient.invalidateQueries({ queryKey: ["reservations_stats"] });
+        } catch (err: any) {
+            console.error("Hard delete error:", err);
+            setNotification({ message: "Silme hatası: " + (err.message || err.toString()), type: 'error' });
+            setTimeout(() => setNotification(null), 4000);
         }
     };
 
@@ -752,7 +804,7 @@ export function useReservationManagement(initialData?: {
         const p = duplicateGuest;
 
         setSelectedGuestId(p.id);
-        setForm(f => ({ ...f, guestName: p.full_name, phone: p.phone || "", email: p.email || "", birthDate: p.birth_date || "", identityPhotoUrl: (p as any).identity_photo_url || "" }));
+        setForm(f => ({ ...f, guestName: p.full_name, phone: p.phone || "", email: p.email || "", birthDate: p.birth_date || "", identityPhotoUrl: (p as { identity_photo_url?: string }).identity_photo_url || "" }));
 
         setIsNewGuest(false);
         setGuestMatchInfo("Kayıtlı misafir eşleştirildi.");
@@ -766,7 +818,7 @@ export function useReservationManagement(initialData?: {
         formTime, setFormTime, formDate, setFormDate, staffMembers, guestSearch, setGuestSearch, guestSearchResults,
         guestSearchLoading, selectedGuestId, setSelectedGuestId, duplicateGuest, form, setForm,
         guestMatchInfo, isNewGuest, conflictWarning, matchedGuestPreferences, matchedGuestPassport,
-        openNew, openEdit, handleSubmit, handleDelete, handleUseDuplicate, closeModal,
+        openNew, openEdit, handleSubmit, handleCancel, handleHardDelete, handleUseDuplicate, closeModal,
         todaySchedule, isDayOff, workingHourSlots, reservationsLoading, rooms,
         isUploading, handleFileUpload, uploadingGuestIndex, roomBlocks,
         notification, handleExtend, handleMove,
