@@ -13,7 +13,7 @@ import { useReservationManagement, CalendarReservation } from "@/hooks/useReserv
 import { ACCENT_COLORS } from "@/constants/reservations";
 import { ReservationStatus } from "@/types/database";
 import { useDebounce } from "@/hooks/useDebounce";
-import { Check, Copy, Trash2, XCircle, Ban } from "lucide-react";
+import { Check, Copy, Trash2, Ban } from "lucide-react";
 import { DeleteConfirmationModal } from "../modal/DeleteConfirmationModal";
 
 type SortField = 'check_in_date' | 'check_out_date' | 'created_at' | 'estimated_amount';
@@ -108,7 +108,7 @@ export default function ReservationsList() {
         formTime, setFormTime, formDate, setFormDate, staffMembers, guestSearch, setGuestSearch, guestSearchResults,
         guestSearchLoading, selectedGuestId, setSelectedGuestId, duplicateGuest, form, setForm,
         guestMatchInfo, isNewGuest, conflictWarning, matchedGuestPreferences, matchedGuestPassport,
-        openNew, openEdit, handleSubmit, handleCancel, handleHardDelete, handleUseDuplicate, closeModal,
+        openNew, openEdit, handleSubmit, handleUseDuplicate, closeModal,
         todaySchedule, rooms, isUploading, handleFileUpload,
         handleExtend, handleMove
     } = useReservationManagement({
@@ -1114,8 +1114,8 @@ export default function ReservationsList() {
                             queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
                             queryClient.invalidateQueries({ queryKey: ["reservations_stats"] });
                             setDeleteConfirmOpen(false);
-                        } catch (err: any) {
-                            alert("İptal hatası: " + err.message);
+                        } catch (err: unknown) {
+                            alert("İptal hatası: " + (err instanceof Error ? err.message : String(err)));
                         }
                     } else {
                         // hard delete with double confirmation
@@ -1138,7 +1138,7 @@ export default function ReservationsList() {
                         }
                     }
                 }}
-                itemName={selectedReservation?.guestName || (selectedReservation as any)?.full_name}
+                itemName={selectedReservation?.guestName || ""}
                 autoClose={false}
             />
         </div>

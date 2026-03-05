@@ -773,9 +773,9 @@ export function useReservationManagement(initialData?: {
             queryClient.invalidateQueries({ queryKey: ["reservations"] });
             queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
             queryClient.invalidateQueries({ queryKey: ["reservations_stats"] });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Cancellation error:", err);
-            setNotification({ message: "İptal hatası: " + (err.message || err.toString()), type: 'error' });
+            setNotification({ message: "İptal hatası: " + (err instanceof Error ? err.message : String(err)), type: 'error' });
             setTimeout(() => setNotification(null), 4000);
         }
     };
@@ -792,9 +792,9 @@ export function useReservationManagement(initialData?: {
             queryClient.invalidateQueries({ queryKey: ["reservations"] });
             queryClient.invalidateQueries({ queryKey: ["reservations_list"] });
             queryClient.invalidateQueries({ queryKey: ["reservations_stats"] });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Hard delete error:", err);
-            setNotification({ message: "Silme hatası: " + (err.message || err.toString()), type: 'error' });
+            setNotification({ message: "Silme hatası: " + (err instanceof Error ? err.message : String(err)), type: 'error' });
             setTimeout(() => setNotification(null), 4000);
         }
     };
