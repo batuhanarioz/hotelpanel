@@ -42,7 +42,7 @@ export default function ReservationCalendarView({ initialReservations, hotelId, 
         openNew,
         openEdit,
         handleSubmit,
-        handleDelete,
+        handleCancel,
         handleUseDuplicate,
         closeModal,
         todaySchedule,
@@ -104,7 +104,7 @@ export default function ReservationCalendarView({ initialReservations, hotelId, 
                     matchedGuestPassport={matchedGuestPassport}
                     conflictWarning={conflictWarning}
                     handleSubmit={handleSubmit}
-                    handleDelete={handleDelete}
+                    handleCancel={handleCancel}
                     handleUseDuplicate={handleUseDuplicate}
                     rooms={rooms}
                 />
